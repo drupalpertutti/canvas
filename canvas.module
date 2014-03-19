@@ -59,25 +59,6 @@ function canvas_style_flush($style) {
 }
 
 /**
- * Implements hook_image_styles_alter().
- *
- *//*
-function canvas_image_styles_alter(&$styles) {
-  if ($styles['thumbnail']['storage'] == IMAGE_STORAGE_DEFAULT) {
-
-    $styles['thumbnail']['effects'][] = array(
-      'label' => t('blur 25'),
-      'name' => 'canvas_blur',
-      'effect callback' => 'canvas_blur_effect',
-      'data' => array(
-        'blur' => '25',
-      ),
-      'weight' => 1,
-    );
-  }
-}*/
-
-/**
  * Implements hook_image_effect_info().
  *
  */
@@ -343,8 +324,16 @@ function canvas_mask_form ($data){
     '#max_length' => 3,
   );
   $form['mask']= array(
-    '#type' => 'textfield',
-    '#title' => t('image'),
+    '#type' => 'managed_file',
+    '#title' => t('Mask'),
+    '#description' => t('Allowed extensions: png'),
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('png'),
+      // Pass the maximum file size in bytes
+      'file_validate_size' => array(1 * 1024 * 1024),
+    ),
+    '#theme' => 'tbs_thumb_upload',
+    '#upload_location' => 'public://canvas/mask/',
     '#default_value' => isset($data['mask']) ? $data['mask'] : '',
   );
 
@@ -361,8 +350,16 @@ function canvas_texture_form ($data){
     '#max_length' => 3,
   );
   $form['texture']= array(
-    '#type' => 'textfield',
-    '#title' => t('image'),
+    '#type' => 'managed_file',
+    '#title' => t('Texture'),
+    '#description' => t('Allowed extensions: png'),
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('png'),
+      // Pass the maximum file size in bytes
+      'file_validate_size' => array(1 * 1024 * 1024),
+    ),
+    '#theme' => 'tbs_thumb_upload',
+    '#upload_location' => 'public://canvas/texture/',
     '#default_value' => isset($data['texture']) ? $data['texture'] : '',
   );
 
@@ -468,9 +465,41 @@ function canvas_mask_effect(&$image, $data) {
     return FALSE;
   }
 
-  $merged=cnvs_create_image_by_url(file_create_url('public://'.$data['mask']));
+  $merged_file=file_load($data['mask']);
+  $merged=cnvs_create_image_by_url(file_create_url($merged_file->uri));
+  $merged_info=cnvs_get_image_info_by_url(file_create_url($merged_file->uri));
 
-  imagecopy($image->resource, $merged, $data['x'], $data['y'], 0, 0, $data['width'], $data['height']);
+  if(!isset($data['width']) || $data['width']==0) { 
+    $data_w=$merged_info['width'];
+  }else{
+    $data_w=$data['width'];
+  }
+
+  if(!isset($data['height']) || $data['height']==0) { 
+    $data_h=$merged_info['height'];
+  }else{
+    $data_h=$data['height'];
+  }
+
+  if(!isset($data['x']) || $data['x']==0) { 
+    $data_x=$merged_info['x'];
+  }else{
+    $data_x=$data['x'];
+  }
+
+  if(!isset($data['y']) || $data['y']==0) { 
+    $data_y=$merged_info['y'];
+  }else{
+    $data_y=$data['y'];
+  }
+
+  if(!isset($data['alpha']) || $data['alpha']==0){
+    $data_alpha=100;
+  }else{
+    $data_alpha=$data['alpha'];
+  }
+
+  imagecopymerge($image->resource, $merged, $data_x, $data_y, 0, 0, $data_w, $data_h, $data_alpha);
   return TRUE;
 }
 
@@ -485,12 +514,19 @@ function canvas_texture_effect(&$image, $data) {
     return FALSE;
   }
 
-  $merged=cnvs_create_image_by_url(file_create_url('public://'.$data['texture']));
-  $merged_info=cnvs_get_image_info_by_url(file_create_url('public://'.$data['texture']));
+  $merged_file=file_load($data['texture']);
+  $merged=cnvs_create_image_by_url(file_create_url($merged_file->uri));
+  $merged_info=cnvs_get_image_info_by_url(file_create_url($merged_file->uri));
+
+  if(!isset($data['alpha']) || $data['alpha']==0){
+    $data_alpha=100;
+  }else{
+    $data_alpha=$data['alpha'];
+  }
 
   for($x=0; $x<=$image->info['width']; $x+=$merged_info['width']){
     for($y=0; $y<=$image->info['height']; $y+=$merged_info['height']){
-      imagecopymerge($image->resource, $merged, $x, $y, 0, 0, $merged_info['width'], $merged_info['height'], $data['alpha']);
+      imagecopymerge($image->resource, $merged, $x, $y, 0, 0, $merged_info['width'], $merged_info['height'], $data_alpha);
     }
   }
   return TRUE;

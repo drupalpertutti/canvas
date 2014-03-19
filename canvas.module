@@ -316,13 +316,6 @@ function canvas_mask_form ($data){
     '#size' => 3,
     '#max_length' => 3,
   );
-  $form['alpha'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Mask alpha'),
-    '#default_value' => isset($data['alpha']) ? $data['alpha'] : '',
-    '#size' => 3,
-    '#max_length' => 3,
-  );
   $form['mask']= array(
     '#type' => 'managed_file',
     '#title' => t('Mask'),
@@ -342,13 +335,6 @@ function canvas_mask_form ($data){
 
 function canvas_texture_form ($data){
   $form=array();
-  $form['alpha'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Mask alpha'),
-    '#default_value' => isset($data['alpha']) ? $data['alpha'] : '',
-    '#size' => 3,
-    '#max_length' => 3,
-  );
   $form['texture']= array(
     '#type' => 'managed_file',
     '#title' => t('Texture'),
@@ -493,13 +479,7 @@ function canvas_mask_effect(&$image, $data) {
     $data_y=$data['y'];
   }
 
-  if(!isset($data['alpha']) || $data['alpha']==0){
-    $data_alpha=100;
-  }else{
-    $data_alpha=$data['alpha'];
-  }
-
-  imagecopymerge($image->resource, $merged, $data_x, $data_y, 0, 0, $data_w, $data_h, $data_alpha);
+  imagecopy($image->resource, $merged, $data_x, $data_y, 0, 0, $data_w, $data_h);
   return TRUE;
 }
 
@@ -518,15 +498,9 @@ function canvas_texture_effect(&$image, $data) {
   $merged=cnvs_create_image_by_url(file_create_url($merged_file->uri));
   $merged_info=cnvs_get_image_info_by_url(file_create_url($merged_file->uri));
 
-  if(!isset($data['alpha']) || $data['alpha']==0){
-    $data_alpha=100;
-  }else{
-    $data_alpha=$data['alpha'];
-  }
-
   for($x=0; $x<=$image->info['width']; $x+=$merged_info['width']){
     for($y=0; $y<=$image->info['height']; $y+=$merged_info['height']){
-      imagecopymerge($image->resource, $merged, $x, $y, 0, 0, $merged_info['width'], $merged_info['height'], $data_alpha);
+      imagecopy($image->resource, $merged, $x, $y, 0, 0, $merged_info['width'], $merged_info['height']);
     }
   }
   return TRUE;

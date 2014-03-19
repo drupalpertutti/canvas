@@ -154,6 +154,13 @@ function canvas_image_effect_info() {
     'form callback' => 'canvas_mask_form',
   );
 
+  $effects['cvs_texture'] = array(
+    'label' => t('Canvas Texture'),
+    'help' => t('Add png Texture in your image'),
+    'effect callback' => 'canvas_texture_effect',
+    'form callback' => 'canvas_texture_form',
+  );
+
   return $effects;
 }
 
@@ -341,27 +348,31 @@ function canvas_mask_form ($data){
     '#default_value' => isset($data['mask']) ? $data['mask'] : '',
   );
 
-  $form['actions']['submit']['#submit'][] = 'canvas_mask_form_submit';
-  $form['actions']['submit']['#value'][] = 'prova';
   return $form;
 }
 
-function canvas_mask_form_submit ($form, &$form_state){
-  debug($form, 'form');
+function canvas_texture_form ($data){
+  $form=array();
+  $form['alpha'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mask alpha'),
+    '#default_value' => isset($data['alpha']) ? $data['alpha'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['texture']= array(
+    '#type' => 'textfield',
+    '#title' => t('image'),
+    '#default_value' => isset($data['texture']) ? $data['texture'] : '',
+  );
+
+  return $form;
 }
 
+
 /**
- * Image effect callback; Colorize an image resource.
+ * Image effect callback.
  *
- * @param object $image
- *   An image object returned by image_load().
- * @param array $data
- *   An array of attributes to use when performing the colorize effect with the
- *   following items:
- *   - "color": The web-style hex color to use when colorizing the image.
- *
- * @return bool
- *   TRUE on success. FALSE on failure to colorize image.
  */
 function canvas_filter_effect(&$image, $data) {
 
@@ -460,6 +471,28 @@ function canvas_mask_effect(&$image, $data) {
   $merged=cnvs_create_image_by_url(file_create_url('public://'.$data['mask']));
 
   imagecopy($image->resource, $merged, $data['x'], $data['y'], 0, 0, $data['width'], $data['height']);
+  return TRUE;
+}
+
+function canvas_texture_effect(&$image, $data) {
+  if (!function_exists('imagecopy')) {
+    watchdog('image', 'The image %image could not be filtered because the imagefilter() function is not available in this PHP installation.', array('%file' => $image->source));
+    return FALSE;
+  }
+
+  if ($image->toolkit != 'gd') {
+    watchdog('image', 'Image filtered failed on %path. Using non GD toolkit.', array('%path' => $image->source), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $merged=cnvs_create_image_by_url(file_create_url('public://'.$data['texture']));
+  $merged_info=cnvs_get_image_info_by_url(file_create_url('public://'.$data['texture']));
+
+  for($x=0; $x<=$image->info['width']; $x+=$merged_info['width']){
+    for($y=0; $y<=$image->info['height']; $y+=$merged_info['height']){
+      imagecopymerge($image->resource, $merged, $x, $y, 0, 0, $merged_info['width'], $merged_info['height'], $data['alpha']);
+    }
+  }
   return TRUE;
 }
 

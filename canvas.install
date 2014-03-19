@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the canvas module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * @ingroup canvas
+ */
+function canvas_install() {
+  variable_set('canvas_style_name', 'canvas_style');
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * @ingroup canvas
+ */
+function canvas_uninstall() {
+  variable_del('canvas_style_name');
+  variable_del('canvas_image_fid');
+}
+
+/**
+ * Implements hook_enable().
+ *
+ * @ingroup canvas
+ */
+function canvas_enable() {
+  $styles = image_styles();
+  foreach ($styles as $style) {
+    image_style_flush($style);
+  }
+}
+
+/**
+ * Implements hook_disable().
+ *
+ * @ingroup canvas
+ */
+function canvas_disable() {
+  // Solves the same problem as canvas_enable().
+  canvas_enable();
+}

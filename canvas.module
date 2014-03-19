@@ -1,0 +1,555 @@
+<?php
+/**
+ * Implements hook_menu().
+ *
+ */
+function canvas_menu() {
+  $items = array();
+  $items['canvas/styles'] = array(
+    'title' => 'Image Example',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('canvas_style_form'),
+    'access arguments' => array('access content'),
+    //'file' => 'canvas.pages.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_help().
+ */
+function canvas_help($path) {
+  switch ($path) {
+    case 'canvas/styles':
+      $output = '<p>' . t('This module add filter for image Style') . '</p>';
+      $output .= '<p>' . t('Image styles can be added/edited using the !link.', array('!link' => l(t('Image styles UI'), 'admin/config/media/image-styles'))) . '</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_image_style_save().
+ *
+ */
+function canvas_image_style_save($style) {
+  if (isset($style['old_name']) && $style['old_name'] == variable_get('canvas_style_name', '')) {
+    variable_set('canvas_style_name', $style['name']);
+  }
+}
+
+/**
+ * Implements hook_image_style_delete().
+ *
+ * This hook allows modules to respond to image styles being deleted.
+ *
+ * @see canvas_style_save()
+ */
+function canvas_image_style_delete($style) {
+  if (isset($style['old_name']) && $style['old_name'] == variable_get('canvas_style_name', '')) {
+    variable_set('canvas_style_name', $style['name']);
+  }
+}
+
+/**
+ * Implements hook_image_style_flush().
+ *
+ */
+function canvas_style_flush($style) {
+  cache_clear_all('*', 'canvas', TRUE);
+}
+
+/**
+ * Implements hook_image_styles_alter().
+ *
+ *//*
+function canvas_image_styles_alter(&$styles) {
+  if ($styles['thumbnail']['storage'] == IMAGE_STORAGE_DEFAULT) {
+
+    $styles['thumbnail']['effects'][] = array(
+      'label' => t('blur 25'),
+      'name' => 'canvas_blur',
+      'effect callback' => 'canvas_blur_effect',
+      'data' => array(
+        'blur' => '25',
+      ),
+      'weight' => 1,
+    );
+  }
+}*/
+
+/**
+ * Implements hook_image_effect_info().
+ *
+ */
+function canvas_image_effect_info() {
+  $effects = array();
+
+  $effects['cvs_blur'] = array(
+  	'label' => t('Canvas Blur'),
+  	'help' => t('Canvas Blur for image'),
+  	'effect callback' => 'canvas_filter_effect',
+  	'form callback' => 'canvas_blur_form',
+  );
+
+  $effects['cvs_brightness'] = array(
+    'label' => t('Canvas Brightness'),
+    'help' => t('Canvas Brightness for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_brightness_form',
+  );
+
+  $effects['cvs_colorize'] = array(
+    'label' => t('Canvas Colorize'),
+    'help' => t('Canvas Colorize for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_colorize_form',
+  );
+
+  $effects['cvs_contrast'] = array(
+    'label' => t('Canvas Contrast'),
+    'help' => t('Canvas Contrast for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_contrast_form',
+  );
+
+  $effects['cvs_edge'] = array(
+    'label' => t('Canvas Edge'),
+    'help' => t('Canvas Edge for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_edge_form',
+  );
+
+  $effects['cvs_emboss'] = array(
+    'label' => t('Canvas Emboss'),
+    'help' => t('Canvas Emboss for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_emboss_form',
+  );
+
+  $effects['cvs_negate'] = array(
+    'label' => t('Canvas Negate'),
+    'help' => t('Canvas Negate for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_negate_form',
+  );
+
+  $effects['cvs_smooth'] = array(
+    'label' => t('Canvas Smooth'),
+    'help' => t('Canvas Smooth for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_smooth_form',
+  );
+
+  $effects['cvs_pixelate'] = array(
+    'label' => t('Canvas Pixelate'),
+    'help' => t('Canvas Pixelate for image'),
+    'effect callback' => 'canvas_filter_effect',
+    'form callback' => 'canvas_pixelate_form',
+  );
+
+  $effects['cvs_mask'] = array(
+    'label' => t('Canvas Mask'),
+    'help' => t('Add png Mask in your image'),
+    'effect callback' => 'canvas_mask_effect',
+    'form callback' => 'canvas_mask_form',
+  );
+
+  return $effects;
+}
+
+/**
+ * Form Builder; Configuration settings for blur effect.
+ *
+ * @param array $data
+ *   The current configuration for this blur effect.
+ */
+function canvas_blur_form($data) {
+  $form = array();
+  $form['blur'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Blur'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['blur']) ? $data['blur'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_brightness_form($data){
+  $form=array();
+  $form['brightness'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Brightness'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['brightness']) ? $data['brightness'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_colorize_form ($data){
+  $form=array();
+  $form['colorize'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Colorize'),
+    '#description' => t('The color to use when colorizing the image. Use web-style hex colors. e.g.) #FF6633.'),
+    '#default_value' => isset($data['colorize']) ? $data['colorize'] : '',
+    '#size' => 7,
+    '#max_length' => 7,
+  );
+  return $form;
+}
+
+function canvas_contrast_form ($data){
+  $form=array();
+  $form['contrast'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Contrast'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['contrast']) ? $data['contrast'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_edge_form ($data){
+  $form=array();
+  $form['edge'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Edge'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['edge']) ? $data['edge'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_emboss_form ($data){
+  $form=array();
+  $form['emboss'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Emboss'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['emboss']) ? $data['emboss'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_negate_form ($data){
+  $form=array();
+  $form['negate'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Negate'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['negate']) ? $data['negate'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_noise_form ($data){
+  $form=array();
+  $form['noise'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Noise'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['noise']) ? $data['noise'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_smooth_form ($data){
+  $form=array();
+  $form['smooth'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Smooth'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['smooth']) ? $data['smooth'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  return $form;
+}
+
+function canvas_pixelate_form ($data){
+  $form=array();
+  $form['pixelate'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pixelate'),
+    '#description' => t('The intensity of effect (example 25)'),
+    '#default_value' => isset($data['pixelate']) ? $data['pixelate'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['clear']= array(
+    '#type' => 'checkbox',
+    '#title' => t('Clear'),
+    '#default_value' => isset($data['clear']) ? $data['clear'] : '',
+  );
+  return $form;
+}
+
+function canvas_mask_form ($data){
+  $form=array();
+  $form['x'] = array(
+    '#type' => 'textfield',
+    '#title' => t('X coordinate'),
+    '#default_value' => isset($data['x']) ? $data['x'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['y'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Y coordinate'),
+    '#default_value' => isset($data['y']) ? $data['y'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mask width'),
+    '#default_value' => isset($data['width']) ? $data['width'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['height'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mask height'),
+    '#default_value' => isset($data['height']) ? $data['height'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['alpha'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mask alpha'),
+    '#default_value' => isset($data['alpha']) ? $data['alpha'] : '',
+    '#size' => 3,
+    '#max_length' => 3,
+  );
+  $form['mask']= array(
+    '#type' => 'textfield',
+    '#title' => t('image'),
+    '#default_value' => isset($data['mask']) ? $data['mask'] : '',
+  );
+
+  $form['actions']['submit']['#submit'][] = 'canvas_mask_form_submit';
+  $form['actions']['submit']['#value'][] = 'prova';
+  return $form;
+}
+
+function canvas_mask_form_submit ($form, &$form_state){
+  debug($form, 'form');
+}
+
+/**
+ * Image effect callback; Colorize an image resource.
+ *
+ * @param object $image
+ *   An image object returned by image_load().
+ * @param array $data
+ *   An array of attributes to use when performing the colorize effect with the
+ *   following items:
+ *   - "color": The web-style hex color to use when colorizing the image.
+ *
+ * @return bool
+ *   TRUE on success. FALSE on failure to colorize image.
+ */
+function canvas_filter_effect(&$image, $data) {
+
+	if (!function_exists('imagefilter')) {
+		watchdog('image', 'The image %image could not be filtered because the imagefilter() function is not available in this PHP installation.', array('%file' => $image->source));
+		return FALSE;
+	}
+
+	if ($image->toolkit != 'gd') {
+		watchdog('image', 'Image filtered failed on %path. Using non GD toolkit.', array('%path' => $image->source), WATCHDOG_ERROR);
+		return FALSE;
+	}
+	if(isset($data['blur'])){
+		$ammount=$data['blur'];
+		if(is_numeric($ammount) && $ammount > 1){
+  		for($i = 1; $i <= $ammount; $i++){
+  		  imagefilter( $image->resource, IMG_FILTER_GAUSSIAN_BLUR );
+      }
+		}else{
+		  imagefilter( $image->resource, IMG_FILTER_GAUSSIAN_BLUR );
+    }
+	}
+	if(isset($data['brightness'])){
+		imagefilter($image->resource, IMG_FILTER_BRIGHTNESS, $data['brightness']);
+	}
+	if(isset($data['colorize'])){
+    if (strlen($data['colorize']) == 4) {
+      $c = $data['colorize'];
+      $data['colorize'] = $c[0] . $c[1] . $c[1] . $c[2] . $c[2] . $c[3] . $c[3];
+    }
+    $data['colorize'] = hexdec(str_replace('#', '0x', $data['colorize']));
+    $rgb = array();
+    for ($i = 16; $i >= 0; $i -= 8) {
+      $rgb[] = (($data['colorize'] >> $i) & 0xFF);
+    }
+    imagefilter($image->resource, IMG_FILTER_COLORIZE, $rgb[0], $rgb[1], $rgb[2]);
+	}
+	if(isset($data['contrast'])){
+		imagefilter($image->resource, IMG_FILTER_CONTRAST, $data['contrast']);
+	}
+	if(isset($data['edge'])){
+		$ammount=$data['edge'];
+		if(is_numeric($ammount) && $ammount > 1){
+  		for($i = 1; $i <= $ammount; $i++){
+  		  imagefilter($image->resource, IMG_FILTER_EDGEDETECT);
+      }
+		}else{
+		  imagefilter($image->resource, IMG_FILTER_EDGEDETECT);
+    }
+	}
+	if(isset($data['emboss'])){
+		$ammount=$data['emboss'];
+		if(is_numeric($ammount) && $ammount > 1){
+  		for($i = 1; $i <= $ammount; $i++){
+  		  imagefilter($image->resource, IMG_FILTER_EMBOSS);
+      }
+		}else{
+		  imagefilter($image->resource, IMG_FILTER_EMBOSS);
+    }
+	}
+	if(isset($data['negate'])){
+		imagefilter($image->resource, IMG_FILTER_NEGATE);
+	}
+	if(isset($data['noise'])){
+		$ammount=$data['noise'];
+		if(is_numeric($ammount) && $ammount > 1){
+  		for($i = 1; $i <= $ammount; $i++){
+  		  imagefilter($image->resource, IMG_FILTER_MEAN_REMOVAL);
+      }
+		}else{
+		  imagefilter($image->resource, IMG_FILTER_MEAN_REMOVAL);
+    }
+	}
+	if(isset($data['smooth'])){
+  	imagefilter($image->resource, IMG_FILTER_SMOOTH, $data['smooth']);
+	}
+	if(isset($data['pixelate'])){
+    $clear=false;
+    if($data['clear']==1) $clear=true;
+  	imagefilter($image->resource, IMG_FILTER_PIXELATE, $data['pixelate'], $clear);
+	}
+  return TRUE;
+}
+
+function canvas_mask_effect(&$image, $data) {
+  if (!function_exists('imagecopy')) {
+    watchdog('image', 'The image %image could not be filtered because the imagefilter() function is not available in this PHP installation.', array('%file' => $image->source));
+    return FALSE;
+  }
+
+  if ($image->toolkit != 'gd') {
+    watchdog('image', 'Image filtered failed on %path. Using non GD toolkit.', array('%path' => $image->source), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $merged=cnvs_create_image_by_url(file_create_url('public://'.$data['mask']));
+
+  imagecopy($image->resource, $merged, $data['x'], $data['y'], 0, 0, $data['width'], $data['height']);
+  return TRUE;
+}
+
+
+
+/**
+ * UTILITY FUNCTIONS
+ */
+function cnvs_create_image_by_url($url){
+  $info=cnvs_get_image_info_by_url($url);
+
+  $create_function_name = "imagecreatefrom{$info['type']}";
+
+  if(function_exists($create_function_name)) {
+    return $create_function_name($url);
+  }else{
+    return false;
+  }
+}
+
+function cnvs_save_image($resource, $url){
+  $info=cnvs_get_image_info_by_url($url);
+  $save_function_name = "image{$info['type']}";
+  if(function_exists($save_function_name)) {
+    $save_function_name($resource, $url);
+  }else{
+    return false;
+  }
+
+}
+
+function cnvs_get_image_info_by_url($url){
+  $info=array();
+  $base_info=getimagesize($url);
+  $info['mime']=$base_info['mime'];
+  $info['width']=$base_info[0];
+  $info['height']=$base_info[1];
+  $info['type']=cnvs_get_image_type_by_number($base_info[2]);
+  return $info;
+}
+
+function cnvs_get_image_type_by_number($n){
+  switch($n){
+    case 1:
+      return 'gif';
+      break;
+    case 2:
+      return 'jpeg';
+      break;
+    case 3:
+      return 'png';
+      break;
+    case 4:
+      return 'swf';
+      break;
+    case 5:
+      return 'psd';
+      break;
+    case 6:
+      return 'bmp';
+      break;
+    case 7:
+      return 'tiff';
+      break;
+    case 8:
+      return 'tiff';
+      break;
+    case 9:
+      return 'jpc';
+      break;
+    case 10:
+      return 'jp2';
+      break;
+    case 11:
+      return 'jpx';
+      break;
+    case 12:
+      return 'jb2';
+      break;
+    case 13:
+      return 'swc';
+      break;
+    case 14:
+      return 'iff';
+      break;
+    case 15:
+      return 'wbmp';
+      break;
+    case 16:
+      return 'xbm';
+      break;
+  }
+}
